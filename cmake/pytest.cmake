@@ -22,6 +22,10 @@ _generate_function_if_testing_is_disabled("add_pytests")
 #   tests (this option can only be used when the ``path`` argument is a
 #   file  but not when it is a directory)
 # :type WORKING_DIRECTORY: string
+# :param COVERAGE_MODULES: Explicit declaration of the python module for which
+#   a coverage report is generated. If emtpy, the module named after the
+#   `PROJECT_NAME` is used for reporting.
+# :type COVERAGE_MODULES: List of strings.
 #
 # @public
 #
@@ -33,7 +37,13 @@ function(add_pytests path)
     return()
   endif()
 
-  cmake_parse_arguments(_pytest "" "OPTIONS" "WORKING_DIRECTORY" "DEPENDENCIES" ${ARGN})
+  cmake_parse_arguments(
+    _pytest
+    ""  # Flag-like arguments
+    "WORKING_DIRECTORY"  # One value arguments
+    "OPTIONS;DEPENDENCIES;COVERAGE_MODULES"  # Multi value arguments
+    ${ARGN}
+  )
 
   # check that the directory exists
   set(_path_name _path_name-NOTFOUND)
@@ -66,8 +76,20 @@ function(add_pytests path)
 
   # check if coverage reports are being requested
   if("$ENV{CATKIN_TEST_COVERAGE}" STREQUAL "1")
-    set(_covarg " --cov=${PROJECT_NAME} --cov-append")
+    if(NOT _pytest_COVERAGE_MODULES)  # Empty -> default to PROJECT_NAME
+      list(APPEND _pytest_COVERAGE_MODULES ${PROJECT_NAME})
+    endif()
+
+    set(_covarg "")
+    foreach(cov_module IN ITEMS ${_pytest_COVERAGE_MODULES})
+      set(_covarg "${_covarg} --cov=${cov_module}")
+    endforeach()
+
+    set(_covarg " ${_covarg} --cov-append")
   endif()
+
+  # Process list of options to a string
+  string (REPLACE ";" " " _pytest_OPTIONS "${_pytest_OPTIONS}")
 
   set(cmd ${cmd} "${PYTESTS} ${_path_name} ${_pytest_OPTIONS} --junit-xml=${output_path}/pytests-${output_file_name}.xml${_covarg}")
 

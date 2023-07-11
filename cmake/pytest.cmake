@@ -75,26 +75,17 @@ function(add_pytests path)
   set(cmd "${CMAKE_COMMAND} -E make_directory ${output_path}")
 
   # check if coverage reports are being requested
-  if("$ENV{CATKIN_TEST_COVERAGE}" STREQUAL "1")
-    if(NOT _pytest_COVERAGE_MODULES)  # Empty -> default to PROJECT_NAME
-      list(APPEND _pytest_COVERAGE_MODULES ${PROJECT_NAME})
-    endif()
-
-    set(_covarg "")
-    foreach(cov_module IN ITEMS ${_pytest_COVERAGE_MODULES})
-      set(_covarg "${_covarg} --cov=${cov_module}")
-    endforeach()
-
-    set(_covarg " ${_covarg} --cov-append")
+  if(GITAI_COVERAGE_ENABLED)
+    set(_covarg "--cov --cov-branch")
   endif()
 
   # Process list of options to a string
   string (REPLACE ";" " " _pytest_OPTIONS "${_pytest_OPTIONS}")
 
-  set(cmd ${cmd} "${PYTESTS} ${_path_name} ${_pytest_OPTIONS} --junit-xml=${output_path}/pytests-${output_file_name}.xml${_covarg}")
+  set(cmd ${cmd} "${PYTESTS} ${_path_name} ${_pytest_OPTIONS} --junit-xml=${output_path}/pytests-${output_file_name}.xml ${_covarg}")
 
   # check if coverage reports are being requested
-  if("$ENV{CATKIN_TEST_COVERAGE}" STREQUAL "1")
+  if(GITAI_COVERAGE_ENABLED)
 
     # A few quick words on the following lines:
     # If the coverage is measured using pytest it will create a .coverage file within
@@ -103,9 +94,7 @@ function(add_pytests path)
     # After the test run the .coverage file is copied into the ${PROJECT_BINARY_DIR}
     # to be collected by e.g. by https://github.com/mikeferguson/code_coverage
 
-    set(coverage_dir "${output_path}${output_file_name}_coverageDIR")
-    set(cmd ${cmd} "cp ${coverage_dir}/.coverage ${PROJECT_BINARY_DIR}/.coverage.${output_file_name}")
-
+    set(coverage_dir "${PROJECT_BINARY_DIR}/python_pytests_coverage")
     # Add target for creating the coverage directory
     add_custom_target(
       create_coverage_dir_${output_file_name} "${CMAKE_COMMAND}" "-E" "make_directory" ${coverage_dir}
@@ -117,7 +106,9 @@ function(add_pytests path)
     set(_pytest_WORKING_DIRECTORY ${coverage_dir})
   endif()
 
-  catkin_run_tests_target("pytests" ${output_file_name} "pytests-${output_file_name}.xml" COMMAND ${cmd} DEPENDENCIES ${_pytest_DEPENDENCIES} WORKING_DIRECTORY ${_pytest_WORKING_DIRECTORY})
+  catkin_run_tests_target("pytests" ${output_file_name} "pytests-${output_file_name}.xml"
+                          COMMAND ${cmd} DEPENDENCIES ${_pytest_DEPENDENCIES}
+                          WORKING_DIRECTORY ${_pytest_WORKING_DIRECTORY})
 
 endfunction()
 

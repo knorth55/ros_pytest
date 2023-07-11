@@ -76,7 +76,7 @@ function(add_pytests path)
 
   # check if coverage reports are being requested
   if(GITAI_COVERAGE_ENABLED)
-    set(_covarg "--cov --cov-branch")
+    set(_covarg "--cov --cov-append --cov-branch")
   endif()
 
   # Process list of options to a string
